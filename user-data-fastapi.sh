@@ -9,11 +9,17 @@ IMAGE_TAG="latest"
 ECR_REGISTRY="${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com"
 IMAGE_URI="${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
 
-# DB 환경 변수 (실제 값으로 교체)
-DB_HOST="your-rds-endpoint.rds.amazonaws.com"
-DB_USER="admin"
-DB_PASSWORD="your-password"
-DB_NAME="st1_db"
+# DB 환경 변수 (Secrets Manager에서 가져오기)
+SECRET=$(aws secretsmanager get-secret-value \
+  --secret-id "rds-db-credentials/st1-free-db/board_user/1775106903574" \
+  --region ${REGION} \
+  --query "SecretString" \
+  --output text)
+
+DB_HOST=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['host'])")
+DB_USER=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['user'])")
+DB_PASSWORD=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['password'])")
+DB_NAME=$(echo $SECRET | python3 -c "import sys,json; print(json.load(sys.stdin)['dbname'])")
 
 # 2. Log 파일 설정
 mkdir -p /tmp/log
