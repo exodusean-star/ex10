@@ -1,0 +1,56 @@
+name: Deploy-Nginx
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'nginx/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_NGINX_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+                       ./nginx
+
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to nginx ASG via SSM
+        run: |
+          aws ssm send-command \
+            --targets "Key=tag:Namespace,Values=st1-nginx" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=[
+              "aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | sudo docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}",
+              "sudo docker pull ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_NGINX_REPOSITORY }}:${{ github.sha }}",
+              "sudo docker stop nginx-container || true",
+              "sudo docker rm nginx-container || true",
+              "sudo docker run -d --name nginx-container -p 80:80 ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_NGINX_REPOSITORY }}:${{ github.sha }}",
+              "sudo docker image prune -af"
+            ]' \
+            --comment "Deploy nginx container" \
+            --timeout-seconds 600 \
+            --region ${{ secrets.AWS_REGION }}

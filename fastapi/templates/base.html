@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}ST1 Company{% endblock %}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f4f8; }
+    nav { background: #2d3748; padding: 16px 40px; display: flex; justify-content: space-between; align-items: center; }
+    nav a { color: white; text-decoration: none; margin-left: 20px; font-size: 0.95rem; }
+    nav a:hover { color: #90cdf4; }
+    .logo { color: white; font-size: 1.2rem; font-weight: bold; }
+    .container { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+    .btn { display: inline-block; padding: 8px 20px; border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: bold; cursor: pointer; border: none; }
+    .btn-blue { background: #4299e1; color: white; }
+    .btn-green { background: #48bb78; color: white; }
+    .btn-red { background: #fc8181; color: white; }
+    .btn-purple { background: #9f7aea; color: white; }
+    .btn:hover { opacity: 0.85; }
+  </style>
+  {% block style %}{% endblock %}
+</head>
+<body>
+  <nav>
+    <span class="logo">🏢 ST1 Company</span>
+    <div>
+      <a href="/">홈</a>
+      <a href="/board/">게시판</a>
+      <a href="/guestbook/">방명록</a>
+    </div>
+  </nav>
+  <div class="container">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
